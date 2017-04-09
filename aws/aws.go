@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	"github.com/aws/aws-sdk-go/service/apigateway"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/waf"
 )
@@ -32,14 +33,16 @@ func New(region string) (*AWS, error) {
 	}
 
 	return &AWS{
-		s3Conn:  s3.New(session.New(awsConfig)),
-		wafConn: waf.New(session.New(awsConfig)),
-		region:  region,
+		apigConn: apigateway.New(session.New(awsConfig)),
+		s3Conn:   s3.New(session.New(awsConfig)),
+		wafConn:  waf.New(session.New(awsConfig)),
+		region:   region,
 	}, nil
 }
 
 type AWS struct {
-	wafConn *waf.WAF
-	s3Conn  *s3.S3
-	region  string
+	apigConn *apigateway.APIGateway
+	wafConn  *waf.WAF
+	s3Conn   *s3.S3
+	region   string
 }

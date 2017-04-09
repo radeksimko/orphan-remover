@@ -22,4 +22,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	err = a.RemoveAPIGatewayRESTAPIs("test")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = a.RemoveAPIGatewayAPIKeys("foo")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
