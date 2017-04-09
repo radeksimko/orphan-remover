@@ -8,12 +8,12 @@ import (
 )
 
 func (a *AWS) RemoveWaf() error {
-	err := a.RemoveWafXssMatchSets()
+	err := a.RemoveWafRules()
 	if err != nil {
 		return err
 	}
 
-	err = a.RemoveWafIPSets()
+	err = a.RemoveWafXssMatchSets()
 	if err != nil {
 		return err
 	}
@@ -28,6 +28,67 @@ func (a *AWS) RemoveWaf() error {
 		return err
 	}
 
+	err = a.RemoveWafIPSets()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AWS) RemoveWafRules() error {
+	out, err := a.wafConn.ListRules(&waf.ListRulesInput{})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[INFO] Found %d Rules", len(out.Rules))
+
+	// TODO: Pagination
+	for _, s := range out.Rules {
+		set, err := a.wafConn.GetRule(&waf.GetRuleInput{
+			RuleId: s.RuleId,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, p := range set.Rule.Predicates {
+			out, err := a.wafConn.GetChangeToken(&waf.GetChangeTokenInput{})
+			if err != nil {
+				return err
+			}
+			input := waf.UpdateRuleInput{
+				ChangeToken: out.ChangeToken,
+				RuleId:      s.RuleId,
+				Updates: []*waf.RuleUpdate{
+					{
+						Action:    awsSDK.String(waf.ChangeActionDelete),
+						Predicate: p,
+					},
+				},
+			}
+			_, err = a.wafConn.UpdateRule(&input)
+			if err != nil {
+				return err
+			}
+			log.Printf("[INFO] Removed Rule predicate: %s", p.String())
+		}
+
+		out, err := a.wafConn.GetChangeToken(&waf.GetChangeTokenInput{})
+		if err != nil {
+			return err
+		}
+
+		_, err = a.wafConn.DeleteRule(&waf.DeleteRuleInput{
+			ChangeToken: out.ChangeToken,
+			RuleId:      s.RuleId,
+		})
+		if err != nil {
+			return err
+		}
+		log.Printf("[INFO] Deleted Rule: %q", *s.RuleId)
+	}
 	return nil
 }
 
